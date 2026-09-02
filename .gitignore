@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+yolo-env/
+*.pt
+data/
+*.log
