@@ -68,7 +68,7 @@ def load_stats() -> dict | None:
 def build_payload(data: dict) -> dict:
     n, s, e = data.get("north", 0), data.get("south", 0), data.get("east", 0)
     ts = datetime.fromtimestamp(data.get("timestamp", time.time()), tz=timezone.utc)
-    def q_est(c): return 0 if c <=3 else 20 if c <=7 else 40
+    def q_est(c): return 0  # kamera tanpa length (hanya kendaraan)
     return {
         "device_id": DEVICE_ID,
         "timestamp": ts.isoformat(),
