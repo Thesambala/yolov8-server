@@ -68,24 +68,29 @@ def load_stats() -> dict | None:
 def build_payload(data: dict) -> dict:
     n, s, e = data.get("north", 0), data.get("south", 0), data.get("east", 0)
     ts = datetime.fromtimestamp(data.get("timestamp", time.time()), tz=timezone.utc)
+    def q_est(c): return 0 if c <=3 else 20 if c <=7 else 40
     return {
         "device_id": DEVICE_ID,
-        # ISO 8601 UTC string — skema DynamoDB TrafficTelemetry: timestamp = S (RANGE key),
-        # mengikuti format ESP32 existing. Epoch float akan ditolak broker tabel.
         "timestamp": ts.isoformat(),
-        # Mode flags ala ESP32 — kamera YOLO adalah sensor asli (vision-based),
-        # tanpa ini subscriber menurunkan sensor_mode=False -> alert Telegram
-        # "Sensor Mode Is Not Active".
         "sensor_mode": True,
         "dummy_mode": False,
         "auto_mode": True,
         "adaptive_mode": True,
         "north_vehicle_count": n,
         "north_density_level": density_level(n),
+        "north_queue_detected": density_level(n) >=2,
+        "north_queue_estimate_cm": q_est(n),
+        "north_queue_vehicles": n,
         "south_vehicle_count": s,
         "south_density_level": density_level(s),
+        "south_queue_detected": density_level(s) >=2,
+        "south_queue_estimate_cm": q_est(s),
+        "south_queue_vehicles": s,
         "east_vehicle_count": e,
         "east_density_level": density_level(e),
+        "east_queue_detected": density_level(e) >=2,
+        "east_queue_estimate_cm": q_est(e),
+        "east_queue_vehicles": e,
     }
 
 
