@@ -14,7 +14,8 @@ Environment=VISION_HTTP_PORT=8081
 Environment=MQTT_HOST=13.238.154.250
 Environment=MQTT_PORT=1883
 Environment=MQTT_USER=jti
-Environment=MQTT_PASS=Azure-password123
+# Password HANYA dari file server (600), tidak di repo:
+EnvironmentFile=/etc/astraea-vision.env
 Environment=AWS_REGION=ap-southeast-2
 ExecStart=/home/ubuntu/yolo-env/bin/python -u -m app.main
 Restart=always
