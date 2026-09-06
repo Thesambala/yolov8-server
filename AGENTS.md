@@ -5,7 +5,8 @@ YOLOv8 inference server: WebSocket :8080 + HTTP :8081 + MQTT bridge ke broker EC
 1. COMMIT + PUSH SETIAP PERUBAHAN: setiap file yang diubah/ditambah (kode, config, docs)
    WAJIB di-`git commit` dan `git push` ke branch yang sama sebelum sesi/pekerjaan selesai.
    Dilarang menumpuk perubahan tanpa push.
-2. JANGAN COMMIT SECRET: `.env`, `*.pem`, `*.key`, password MQTT. (Repo ini PUBLIC.)
+2. SECRET: semua repo kini PRIVATE. Kredensial (MQTT_* systemd, API key) BOLEH
+   didokumentasikan di repo selama tetap private. DILARANG menjadikan repo ini public.
    Jangan commit file model (`*.pt`, puluhan MB) — model produksi
    `yolov8s_indotraffic_best.pt` (kelas: Bus, Mobil Penumpang, Pejalan Kaki,
    Sepeda Motor, Truck, Unmotorized) tersimpan di aslamrosul/backup-all.
