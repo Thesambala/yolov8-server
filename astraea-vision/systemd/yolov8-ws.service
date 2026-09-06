@@ -6,7 +6,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/yolov8-server
 Environment=DETECT_MODEL=/home/ubuntu/yolov8s_indotraffic_best.pt
-Environment=DETECT_CLASSES=0:Bus,1:Mobil Penumpang,2:Pejalan Kaki,3:Sepeda Motor,4:Truck,5:Unmotorized
+Environment="DETECT_CLASSES=0:Bus,1:Mobil Penumpang,2:Pejalan Kaki,3:Sepeda Motor,4:Truck,5:Unmotorized"
 Environment=DETECT_CONF=0.30
 Environment=DETECT_IMGSZ=960
 ExecStart=/home/ubuntu/yolo-env/bin/python -u server.py
