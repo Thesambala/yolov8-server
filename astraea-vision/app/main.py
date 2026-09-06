@@ -108,8 +108,10 @@ def inference_loop() -> None:
 
 
 def fuzzy_loop() -> None:
+    tick = 0
     while True:
         t0 = time.monotonic()
+        tick += 1
         iids = set()
         for cid in STORE.camera_ids():
             m = HUB._meta.get(cid, {})
@@ -148,8 +150,10 @@ def fuzzy_loop() -> None:
                 "intersection_id": iid, "approaches": approaches,
                 "generated_at": rec_msg["generated_at"],
             })
-            # Kompatibilitas legacy agar dashboard/subscriber lama tetap hidup (§26).
-            mqtt.publish_legacy_compat(iid, f"CAM_YOLO_{iid}", approaches)
+            # Kompatibilitas legacy 5 detikan agar dashboard lama tetap hidup (§26)
+            # tanpa membanjiri DynamoDB/S3 (kanonis tetap 1 Hz, sampled di subscriber).
+            if tick % 5 == 0:
+                mqtt.publish_legacy_compat(iid, f"CAM_YOLO_{iid}", approaches)
         dt = time.monotonic() - t0
         time.sleep(max(0.2, config.FUZZY_MIN_INTERVAL_S - dt))
 
