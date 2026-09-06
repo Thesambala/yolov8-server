@@ -131,6 +131,7 @@ def fuzzy_loop() -> None:
                 )
                 green = stable_green(iid, approach, rec["recommended_green_s"])
                 approaches[approach] = {
+                    "online": bool(cam.get("online", False)),
                     "active_vehicle_count": cam.get("active_vehicle_count", 0),
                     "queue_vehicle_count": cam.get("queue_vehicle_count", 0),
                     "sensor_level": st["sensor"].get("sensor_level", 0),
