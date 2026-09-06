@@ -1,0 +1,10 @@
+ultralytics==8.4.142
+opencv-python-headless==5.0.0.93
+websockets==17.1
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+python-multipart==0.0.32
+paho-mqtt==2.1.0
+boto3==1.43.89
+numpy==2.5.2
+pytest==8.3.4

@@ -1,0 +1,23 @@
+[Unit]
+Description=ASTRAEA unified vision service (ingest WS 8082 + HTTP 8081)
+After=network.target
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/astraea-vision
+Environment=DETECT_MODEL=/home/ubuntu/yolov8s_indotraffic_best.pt
+Environment=DETECT_CONF=0.30
+Environment=DETECT_IOU=0.60
+Environment=DETECT_IMGSZ=960
+Environment=VISION_WS_PORT=8082
+Environment=VISION_HTTP_PORT=8081
+Environment=MQTT_HOST=13.238.154.250
+Environment=MQTT_PORT=1883
+Environment=MQTT_USER=jti
+Environment=MQTT_PASS=Azure-password123
+Environment=AWS_REGION=ap-southeast-2
+ExecStart=/home/ubuntu/yolo-env/bin/python -u -m app.main
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target
