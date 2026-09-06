@@ -16,5 +16,7 @@ YOLOv8 inference server: WebSocket :8080 + HTTP :8081 + MQTT bridge ke broker EC
    server_detect_http:app` — JANGAN dijalankan via `python` langsung),
    `yolov8-bridge` (publish ke `traffic/CAM_YOLO_01/data`).
    Dependensi: `~/yolo-env` (ultralytics, torch CPU, opencv-headless + `libgl1` sistem).
-4. REPO TERKAIT: aslamrosul/adaptive-traffic-monitoring (web/Vision Lab),
-   Thesambala/astraea-subscriber-mqtt (subscriber), aslamrosul/backup-all (backup, PRIVATE).
+4. AUTO-PUSH: server ini punya deploy key SSH (`~/.ssh/astraea-yolo`, remote `gh-yolo`).
+   Selesai mengubah file di `~/workspace/yolov8-server`: commit lalu `git push`
+   langsung (tanpa token). Lalu sync ke EC2 `yolov8-server` via EC2 Instance Connect
+   (scp + `systemctl restart yolov8-ws yolov8-http yolov8-bridge`).
