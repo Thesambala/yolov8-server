@@ -133,7 +133,8 @@ async def detect(frame: UploadFile = File(...)):
                 "w": round(bw / w * 100, 1),
                 "h": round(bh / h * 100, 1),
             })
-            stats[label] += 1
+            # stats dinamis: dukung label kustom (model fine-tune Indonesia).
+            stats[label] = stats.get(label, 0) + 1
             stats["totalVehicles"] += 1
 
     return {"detections": detections, "stats": stats}

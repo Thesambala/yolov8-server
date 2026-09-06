@@ -165,7 +165,9 @@ def infer(img: np.ndarray, conf_thres: float | None = None) -> dict:
                 "w": round(bw / w * 100, 1),
                 "h": round(bh / h * 100, 1),
             })
-            stats[label] += 1
+            # stats dinamis: dukung label kustom (model fine-tune Indonesia)
+            # selain 5 kunci Inggris agar tidak KeyError -> drop koneksi.
+            stats[label] = stats.get(label, 0) + 1
             stats["totalVehicles"] += 1
             # partisi arah berdasar posisi tengah box (atas=north, bawah=south)
             cy_pct = (py + bh / 2) / h * 100
