@@ -31,6 +31,7 @@ class CameraTracker:
         self.line_y = line_y
         self.last_pos: Dict[int, Tuple[float, float, float]] = {}
         self.still_since: Dict[int, float] = {}
+        self.cat: Dict[int, str] = {}  # kategori per track (vehicle/person/unmotorized)
         self.side: Dict[int, int] = {}  # -1 atas, +1 bawah (di luar band)
         self.flow_total = 0
         self.flow_events: deque = deque()
@@ -51,21 +52,28 @@ class CameraTracker:
                 tid = int(tr["track_id"])
                 seen.add(tid)
                 cx, cy = float(tr["cx"]), float(tr["cy"])
+                category = str(tr.get("category", "vehicle"))
+                self.cat[tid] = category
+                is_vehicle = category == "vehicle"
                 prev = self.last_pos.get(tid)
                 old_side = self.side.get(tid, 0)
                 new_side = self._side_of(cy, old_side)
                 if prev is not None:
                     _, pcy, pt = prev
                     dt = max(1e-3, now - pt)
-                    speed = abs(cy - pcy) / dt
+                    speed = abs(cy - pcy) / dt  # unit 0-100 per detik
                     # Transisi penuh antar sisi = 1 crossing (dengan arah).
                     if old_side != 0 and new_side != 0 and new_side != old_side:
                         self.flow_total += 1
                         self.flow_events.append(now)
                         direction = "down" if new_side > old_side else "up"
                         self.flow_by_direction[direction] += 1
-                    if speed < STILL_SPEED:
-                        self.still_since.setdefault(tid, now)
+                    # L: hanya vehicle yang boleh masuk still/waiting.
+                    if is_vehicle:
+                        if speed < STILL_SPEED:
+                            self.still_since.setdefault(tid, now)
+                        else:
+                            self.still_since.pop(tid, None)
                     else:
                         self.still_since.pop(tid, None)
                 if new_side != 0:
@@ -75,18 +83,28 @@ class CameraTracker:
                 self.last_pos.pop(tid, None)
                 self.still_since.pop(tid, None)
                 self.side.pop(tid, None)
+                self.cat.pop(tid, None)
             cutoff = now - 60.0
             while self.flow_events and self.flow_events[0] < cutoff:
                 self.flow_events.popleft()
-            still_ids = [t for t, s0 in self.still_since.items() if now - s0 >= STILL_MIN_S]
-            max_wait = max([now - s0 for s0 in self.still_since.values()], default=0.0)
+            # K: waiting HANYA dari stopped vehicle (>= threshold), bukan semua still.
+            vehicle_stopped = [
+                t for t, s0 in self.still_since.items()
+                if now - s0 >= STILL_MIN_S and self.cat.get(t) == "vehicle"
+            ]
+            vehicle_wait = max(
+                [now - self.still_since[t] for t in vehicle_stopped],
+                default=0.0,
+            )
             return {
                 "tracked": len(self.last_pos),
                 "flow_total": self.flow_total,
                 "flow_60s": len(self.flow_events),
                 "flow_by_direction": dict(self.flow_by_direction),
-                "stopped_ids": still_ids,
-                "max_waiting_s": round(max_wait, 1),
+                "stopped_ids": vehicle_stopped,
+                "vehicle_stopped_ids": vehicle_stopped,
+                "max_waiting_s": round(vehicle_wait, 1),
+                "vehicle_max_waiting_s": round(vehicle_wait, 1),
             }
 
 
