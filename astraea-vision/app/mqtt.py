@@ -81,7 +81,13 @@ def publish(topic: str, payload: Dict[str, Any]) -> bool:
 
 
 def publish_legacy_compat(intersection_id: str, device_id: str, approaches: Dict[str, Any]) -> bool:
-    """Jembatan legacy: agregat per-pendekatan -> traffic/{device}/data (§26)."""
+    """Jembatan legacy: agregat per-pendekatan -> traffic/{device}/data (§26).
+
+    CATATAN SKEMA (E): main.py mengirim approaches FLAT per pendekatan
+    (online, active_vehicle_count, queue_vehicle_count, sensor_level, ...),
+    BUKAN nested camera{}/sensor{}. Jangan baca nested (hasilnya selalu 0).
+    queue_vehicle_count (KENDARAAN) tidak pernah dipetakan ke cm.
+    """
     flat: Dict[str, Any] = {
         "device_id": device_id,
         "intersection_id": intersection_id,
@@ -89,9 +95,11 @@ def publish_legacy_compat(intersection_id: str, device_id: str, approaches: Dict
         "source": "astraea-vision",
     }
     for lane, st in approaches.items():
-        cam = st.get("camera", {})
-        sen = st.get("sensor", {})
-        flat[f"{lane}_vehicle_count"] = cam.get("active_vehicle_count", 0)
-        flat[f"{lane}_density_level"] = sen.get("sensor_level", 0)
-        flat[f"{lane}_queue_estimate_cm"] = cam.get("queue_vehicle_count", 0)
+        if not isinstance(st, dict):
+            continue
+        flat[f"{lane}_vehicle_count"] = st.get("active_vehicle_count", 0)
+        flat[f"{lane}_density_level"] = st.get("sensor_level", 0)
+        flat[f"{lane}_queue_vehicles"] = st.get("queue_vehicle_count", 0)
+        flat[f"{lane}_queue_estimate_cm"] = 0  # tak ada cm dari vision; jangan karang
+        flat[f"{lane}_vision_online"] = st.get("online", False)
     return publish(f"traffic/{device_id}/data", flat)

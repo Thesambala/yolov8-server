@@ -67,12 +67,10 @@ def stable_green(iid: str, approach: str, value: float) -> float:
     return prev[0]
 
 
-def waiting_estimate(tracker_summary: Dict[str, Any], queue_n: int) -> float:
-    # F8: waiting aktual dari track (max durasi diam); estimasi queue*3 hanya fallback.
-    actual = float(tracker_summary.get("max_waiting_s", 0.0) or 0.0)
-    if actual > 0:
-        return round(actual, 1)
-    return round(queue_n * 3.0, 1)
+def waiting_actual(tracker_summary: Dict[str, Any]) -> float:
+    """G: waiting MURNI dari track (max durasi diam). Tanpa queue*konstanta.
+    0.0 bila belum ada stopped track yang memenuhi threshold."""
+    return round(float(tracker_summary.get("max_waiting_s", 0.0) or 0.0), 1)
 
 
 def inference_loop() -> None:
@@ -103,7 +101,7 @@ def inference_loop() -> None:
                 queue_vehicles=queue_n,
                 stopped_vehicles=len(stopped),
                 flow_60s=summary.get("flow_60s", 0),
-                waiting_s=waiting_estimate(summary, queue_n),
+                waiting_s=waiting_actual(summary),
                 confidence=sum(confs) / len(confs) if confs else 0.0,
             )
         dt = time.monotonic() - t0

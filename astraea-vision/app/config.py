@@ -24,8 +24,8 @@ def _getint(name: str, default: int) -> int:
 MODEL_PATH = _getenv("DETECT_MODEL", "/home/ubuntu/yolov8s_indotraffic_best.pt")
 CONFIDENCE = _getfloat("DETECT_CONF", 0.30)
 IOU = _getfloat("DETECT_IOU", 0.60)
-INFER_IMGSZ = _getint("DETECT_IMGSZ", 960)
-MIN_SRC_WIDTH = _getint("DETECT_MIN_SRC_WIDTH", 960)
+INFER_IMGSZ = _getint("DETECT_IMGSZ", 640)  # = train imgsz model (metadata); VGA tanpa upscale
+MIN_SRC_WIDTH = _getint("DETECT_MIN_SRC_WIDTH", 640)
 
 # --- ingest ---
 WS_HOST = _getenv("VISION_WS_HOST", "0.0.0.0")
