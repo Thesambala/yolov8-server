@@ -133,17 +133,17 @@ def test_crossing_hysteresis_no_jitter_count():
 
 
 def test_waiting_time_from_tracks():
+    # Timestamp HARUS monotonik naik (H).
     tr = CameraTracker(line_y=50.0)
-    t = 100.0
-    tr.update([{"track_id": 3, "cx": 10, "cy": 10}], t)  # muncul
-    tr.update([{"track_id": 3, "cx": 10, "cy": 10}], t + 5.0)  # mulai diam
-    s = tr.update([{"track_id": 3, "cx": 10, "cy": 10}], t + 7.5)  # diam 2.5 dtk
+    tr.update([{"track_id": 3, "cx": 10, "cy": 10}], 100.0)  # muncul
+    tr.update([{"track_id": 3, "cx": 10, "cy": 10}], 101.0)  # mulai diam
+    s = tr.update([{"track_id": 3, "cx": 10, "cy": 10}], 104.0)  # diam 3 dtk
     assert 3 in s["stopped_ids"]
-    assert s["max_waiting_s"] >= 2.5
-    # Bergerak lagi -> reset stopped.
-    s = tr.update([{"track_id": 3, "cx": 10, "cy": 40}], t + 6.0)
+    assert s["max_waiting_s"] > 2.0
+    # Bergerak signifikan -> reset stopped.
+    s = tr.update([{"track_id": 3, "cx": 10, "cy": 40}], 105.0)
     assert 3 not in s["stopped_ids"]
     assert s["max_waiting_s"] == 0.0
     # Track hilang -> state dibersihkan.
-    s = tr.update([], t + 7.0)
+    s = tr.update([], 106.0)
     assert s["tracked"] == 0

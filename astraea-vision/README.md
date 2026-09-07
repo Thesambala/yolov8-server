@@ -41,7 +41,7 @@ Deploy di Server 2 (54.253.237.179):
    sudo nginx -t && sudo systemctl reload nginx
    ```
    `yolov8-ws` menjalankan `server.py` (:8080) dengan model produksi
-   `yolov8s_indotraffic_best.pt` (kelas Indonesia, imgsz 960 untuk CPU).
+   `yolov8s_indotraffic_best.pt` (kelas Indonesia; inferensi imgsz 640 = train size, tanpa upscale VGA).
 2. Cek: `systemctl is-active yolov8-ws` dan dari laptop
    `curl -s https://vision.astraea.my.id/health`.
 3. Opsional: nginx Server 1 (`astraea.my.id`) masih proxy `/yolo-ws/` ke IP
