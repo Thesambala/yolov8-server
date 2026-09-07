@@ -47,6 +47,11 @@ async def handle_camera(ws) -> None:
     if not ok:
         code = {"unknown-camera": 4404, "camera-disabled": 4403}.get(reason, 4401)
         logger.warning("ingest-reject %s (%s) reason=%s", camera_id or peer, peer, reason)
+        # F9: kirim JSON error DULU agar firmware mudah diagnosis, baru close.
+        try:
+            await ws.send(json.dumps({"ok": False, "error": reason}))
+        except Exception:
+            pass
         await ws.close(code=code, reason=reason)
         return
     logger.info("ingest-accept camera=%s approach=%s fw=%s", camera_id, approach_id, firmware)
@@ -54,7 +59,8 @@ async def handle_camera(ws) -> None:
     frames = 0
     dropped = 0
     t0 = time.monotonic()
-    last_seen_push = 0.0
+    first_frame_at: float | None = None
+    last_seen_push = t0
     try:
         await ws.send(json.dumps({"ok": True, "server": "astraea-vision"}))
         async for msg in ws:
@@ -68,9 +74,11 @@ async def handle_camera(ws) -> None:
             h, w = img.shape[:2]
             STORE.put(camera_id, bytes(msg), width=w, height=h)
             frames += 1
+            if first_frame_at is None:
+                first_frame_at = time.monotonic()
             now = time.monotonic()
-            if now - last_seen_push > 5.0:
-                fps = frames / max(1e-3, now - t0)
+            if now - last_seen_push > 5.0 and first_frame_at is not None:
+                fps = frames / max(1.0, now - first_frame_at)
                 try:
                     camera_registry.touch_seen(camera_id, fps_ingest=round(fps, 1))
                 except Exception as exc:

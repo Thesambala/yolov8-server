@@ -68,7 +68,10 @@ def stable_green(iid: str, approach: str, value: float) -> float:
 
 
 def waiting_estimate(tracker_summary: Dict[str, Any], queue_n: int) -> float:
-    # Estimasi sederhana: antrean diasumsikan terurai ~1 kend/3 dtk + basis tunggu.
+    # F8: waiting aktual dari track (max durasi diam); estimasi queue*3 hanya fallback.
+    actual = float(tracker_summary.get("max_waiting_s", 0.0) or 0.0)
+    if actual > 0:
+        return round(actual, 1)
     return round(queue_n * 3.0, 1)
 
 
@@ -163,7 +166,18 @@ def main() -> None:
     global TRACKERS
     info = ENGINE.load()
     MODEL_INFO.update(info)
-    TRACKERS = TrackerHub(ENGINE)
+    # F6: engine pertama dipakai ulang untuk kamera pertama (tetap 1 instance
+    # per kamera); kamera berikutnya me-load instance sendiri (terisolasi).
+    first = [ENGINE]
+
+    def _factory():
+        if first:
+            return first.pop()
+        eng = YoloEngine()
+        eng.load()
+        return eng
+
+    TRACKERS = TrackerHub(engine_factory=_factory)
     mqtt.start(on_sensor=on_sensor_payload)
     threading.Thread(target=inference_loop, daemon=True, name="inference").start()
     threading.Thread(target=fuzzy_loop, daemon=True, name="fuzzy").start()

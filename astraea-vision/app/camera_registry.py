@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import time
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 import boto3
@@ -46,7 +47,7 @@ def touch_seen(camera_id: str, fps_ingest: float = 0.0, health_state: str = "ONL
         UpdateExpression="SET last_seen = :now, fps_ingest = :fps, health_state = :h",
         ExpressionAttributeValues={
             ":now": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            ":fps": fps_ingest,
+            ":fps": Decimal(str(fps_ingest)),
             ":h": health_state,
         },
     )
