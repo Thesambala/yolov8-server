@@ -51,6 +51,12 @@ def camera_status(camera_id: str, authorization: str | None = Header(default=Non
     if not reg:
         raise HTTPException(status_code=404, detail="unknown camera")
     st = HUB.camera_state(camera_id)
+    try:
+        from .frame_store import STORE as _STORE
+
+        frame_age = _STORE.age_s(camera_id)
+    except Exception:
+        frame_age = None
     return {
         "camera_id": camera_id,
         "intersection_id": reg.get("intersection_id"),
@@ -59,6 +65,7 @@ def camera_status(camera_id: str, authorization: str | None = Header(default=Non
         "health_state": reg.get("health_state"),
         "last_seen": reg.get("last_seen"),
         "fps_ingest": reg.get("fps_ingest"),
+        "frame_age_s": round(frame_age, 1) if frame_age is not None else None,
         "metrics": st,
     }
 

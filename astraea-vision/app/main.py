@@ -79,7 +79,8 @@ def inference_loop() -> None:
     while True:
         t0 = time.monotonic()
         for camera_id in STORE.camera_ids():
-            item = STORE.get(camera_id)
+            # G: klaim frame BARU yang fresh saja; sama/basi -> skip infer.
+            item = STORE.claim_frame(camera_id, config.VISION_FRESH_S)
             if not item:
                 continue
             arr = np.frombuffer(item["jpeg"], dtype=np.uint8)

@@ -56,6 +56,7 @@ async def handle_camera(ws) -> None:
         return
     logger.info("ingest-accept camera=%s approach=%s fw=%s", camera_id, approach_id, firmware)
     HUB.register(camera_id, intersection_id, approach_id)
+    HUB.set_connected(camera_id, True)
     frames = 0
     dropped = 0
     t0 = time.monotonic()
@@ -87,6 +88,7 @@ async def handle_camera(ws) -> None:
     except Exception as exc:
         logger.info("ingest-closed camera=%s: %s", camera_id, exc)
     finally:
+        HUB.set_connected(camera_id, False)
         logger.info("ingest-end camera=%s frames=%d dropped=%d", camera_id, frames, dropped)
 
 

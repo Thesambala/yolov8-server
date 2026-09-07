@@ -133,13 +133,13 @@ def test_crossing_hysteresis_no_jitter_count():
 
 
 def test_waiting_time_from_tracks():
-    # Timestamp HARUS monotonik naik (H).
+    # Monotonik: 100 muncul, 101+104 diam, 105 bergerak, 106 hilang.
     tr = CameraTracker(line_y=50.0)
     tr.update([{"track_id": 3, "cx": 10, "cy": 10}], 100.0)  # muncul
     tr.update([{"track_id": 3, "cx": 10, "cy": 10}], 101.0)  # mulai diam
     s = tr.update([{"track_id": 3, "cx": 10, "cy": 10}], 104.0)  # diam 3 dtk
     assert 3 in s["stopped_ids"]
-    assert s["max_waiting_s"] > 2.0
+    assert s["max_waiting_s"] >= 2.5
     # Bergerak signifikan -> reset stopped.
     s = tr.update([{"track_id": 3, "cx": 10, "cy": 40}], 105.0)
     assert 3 not in s["stopped_ids"]
@@ -147,3 +147,64 @@ def test_waiting_time_from_tracks():
     # Track hilang -> state dibersihkan.
     s = tr.update([], 106.0)
     assert s["tracked"] == 0
+
+
+def _trk(cx, cy, tid=1, cat="vehicle"):
+    return {"track_id": tid, "cx": cx, "cy": cy, "category": cat}
+
+
+def test_person_still_does_not_raise_vehicle_waiting():
+    # Person diam 10 dtk + vehicle BERGERAK di t=115 -> vehicle_max = 0.
+    # (Satu update() = satu frame berisi SEMUA track terlihat.)
+    tr = CameraTracker(line_y=50.0)
+    P = lambda x, y: {"track_id": 9, "cx": x, "cy": y, "category": "person"}
+    V = lambda x, y: {"track_id": 1, "cx": x, "cy": y, "category": "vehicle"}
+    tr.update([P(10, 10), V(60, 60)], 100.0)
+    tr.update([P(10, 10), V(60, 60)], 105.0)  # keduanya still@105
+    s = tr.update([P(10, 10), V(60, 90)], 115.0)  # P wait=10, V bergerak
+    assert s["vehicle_max_waiting_s"] == 0.0  # TEST A (kode lama: 10)
+    assert s["vehicle_stopped_ids"] == []
+
+
+def test_vehicle_wait_excludes_person():
+    # Person still@105 (wait 8 di t=113), vehicle still@110 (wait 3).
+    # Metric vehicle HARUS 3, bukan 8 (bukti person tidak mencemari).
+    tr = CameraTracker(line_y=50.0)
+    P = lambda x, y: {"track_id": 9, "cx": x, "cy": y, "category": "person"}
+    V = lambda x, y: {"track_id": 1, "cx": x, "cy": y, "category": "vehicle"}
+    tr.update([P(10, 10), V(20, 20)], 100.0)
+    tr.update([P(10, 10), V(20, 20)], 105.0)  # still@105 keduanya
+    tr.update([P(10, 10), V(20, 50)], 108.0)  # V bergerak vertikal (reset)
+    tr.update([P(10, 10), V(20, 50)], 110.0)  # V still@110
+    s = tr.update([P(10, 10), V(20, 50)], 113.0)
+    assert 2.5 <= s["vehicle_max_waiting_s"] <= 3.5  # TEST B (bukan 8)
+    assert s["vehicle_stopped_ids"] == [1]
+
+
+def test_two_vehicles_max():
+    tr = CameraTracker(line_y=50.0)
+    tr.update([_trk(10, 10, 1), _trk(30, 30, 2)], 100.0)
+    tr.update([_trk(10, 10, 1), _trk(30, 30, 2)], 103.0)  # still@103
+    s = tr.update([_trk(10, 10, 1), _trk(30, 30, 2)], 108.0)  # wait 5
+    assert s["vehicle_max_waiting_s"] >= 4.5  # TEST C (~5)
+    assert sorted(s["vehicle_stopped_ids"]) == [1, 2]
+
+
+def test_below_threshold_zero():
+    tr = CameraTracker(line_y=50.0)
+    tr.update([_trk(10, 10, 1)], 100.0)
+    s = tr.update([_trk(10, 10, 1)], 101.0)  # diam 1 dtk < 2
+    assert 1 not in s["stopped_ids"]
+    assert s["max_waiting_s"] == 0.0  # TEST D
+    assert s["vehicle_max_waiting_s"] == 0.0
+
+
+def test_move_resets_and_cleanup():
+    tr = CameraTracker(line_y=50.0)
+    tr.update([_trk(10, 10, 1)], 100.0)
+    tr.update([_trk(10, 10, 1)], 104.0)
+    # NOTE: tid sama tapi posisi pindah jauh -> speed tinggi -> reset
+    s = tr.update([{"track_id": 1, "cx": 10, "cy": 80}], 105.0)
+    assert 1 not in s["stopped_ids"]  # TEST E
+    s = tr.update([], 106.0)
+    assert s["tracked"] == 0  # TEST F
