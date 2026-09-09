@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from . import camera_registry, config
-from .frame_store import STORE
+from .frame_store import ANNOTATED_STORE, STORE
 from .metrics import HUB
 
 logger = logging.getLogger("vision.http")
@@ -52,11 +52,11 @@ def camera_status(camera_id: str, authorization: str | None = Header(default=Non
         raise HTTPException(status_code=404, detail="unknown camera")
     st = HUB.camera_state(camera_id)
     try:
-        from .frame_store import STORE as _STORE
-
-        frame_age = _STORE.age_s(camera_id)
+        frame_age = STORE.age_s(camera_id)
     except Exception:
         frame_age = None
+    ann = ANNOTATED_STORE.get(camera_id)
+    ann_age = ANNOTATED_STORE.age_s(camera_id)
     return {
         "camera_id": camera_id,
         "intersection_id": reg.get("intersection_id"),
@@ -66,6 +66,9 @@ def camera_status(camera_id: str, authorization: str | None = Header(default=Non
         "last_seen": reg.get("last_seen"),
         "fps_ingest": reg.get("fps_ingest"),
         "frame_age_s": round(frame_age, 1) if frame_age is not None else None,
+        "annotated_available": ann is not None,
+        "annotated_age_s": round(ann_age, 1) if ann_age is not None else None,
+        "annotated_source_seq": ann.get("source_seq") if ann else None,
         "metrics": st,
     }
 
@@ -77,6 +80,22 @@ def snapshot(camera_id: str, authorization: str | None = Header(default=None)):
     item = STORE.get(camera_id)
     if not item:
         raise HTTPException(status_code=404, detail="no frame yet")
+    return Response(content=item["jpeg"], media_type="image/jpeg")
+
+
+@app.get("/v1/cameras/{camera_id}/annotated.jpg")
+def annotated(camera_id: str, authorization: str | None = Header(default=None)):
+    if not _viewer_ok(authorization):
+        raise HTTPException(status_code=401, detail="unauthorized")
+    try:
+        reg = camera_registry.get_camera(camera_id)
+    except Exception:
+        reg = None
+    if not reg:
+        raise HTTPException(status_code=404, detail="unknown camera")
+    item = ANNOTATED_STORE.get(camera_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="no annotated frame yet")
     return Response(content=item["jpeg"], media_type="image/jpeg")
 
 

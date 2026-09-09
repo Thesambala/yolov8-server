@@ -16,8 +16,9 @@ import numpy as np
 import uvicorn
 
 from . import camera_ingest, config, fuzzy, mqtt
+from .annotator import annotate_frame, encode_jpeg
 from .controller_registry import controller_for
-from .frame_store import STORE
+from .frame_store import ANNOTATED_STORE, STORE
 from .metrics import HUB
 from .schemas import build_recommendation
 from .stream import MODEL_INFO, app as fastapi_app
@@ -105,6 +106,27 @@ def inference_loop() -> None:
                 waiting_s=waiting_actual(summary),
                 confidence=sum(confs) / len(confs) if confs else 0.0,
             )
+            # Anotasi presentasi dari HASIL inferensi yang sama (tanpa YOLO kedua).
+            # Gagal anotasi tidak boleh mengganggu metrik/fuzzy/MQTT.
+            try:
+                annotated = annotate_frame(
+                    img,
+                    tracks,
+                    stopped,
+                    count_line_y=50.0,
+                    camera_id=camera_id,
+                    source_seq=item.get("seq", 0),
+                    latency_s=summary.get("latency_s", 0.0),
+                )
+                enc = encode_jpeg(annotated)
+                if enc is not None:
+                    h, w = annotated.shape[:2]
+                    ANNOTATED_STORE.put(
+                        camera_id, enc, source_seq=item.get("seq", 0),
+                        width=w, height=h, track_count=len(tracks),
+                    )
+            except Exception as exc:
+                logger.warning("annotate %s failed: %s", camera_id, exc)
         dt = time.monotonic() - t0
         time.sleep(max(0.05, period - dt))
 
