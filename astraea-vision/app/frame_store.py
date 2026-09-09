@@ -73,3 +73,49 @@ class FrameStore:
 
 
 STORE = FrameStore()
+
+
+class AnnotatedFrameStore:
+    """Frame TERANOTASI terakhir per kamera (terpisah dari raw).
+    Latest-only, bytes JPEG immutable, provenance source_seq.
+    Ditulis thread inference, dibaca FastAPI. Tanpa antrean/history."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._frames: Dict[str, Dict[str, Any]] = {}
+
+    def put(
+        self,
+        camera_id: str,
+        jpeg: bytes,
+        source_seq: int,
+        width: int = 0,
+        height: int = 0,
+        track_count: int = 0,
+    ) -> None:
+        with self._lock:
+            self._frames[camera_id] = {
+                "jpeg": bytes(jpeg),
+                "at": time.monotonic(),
+                "wall": time.time(),
+                "bytes": len(jpeg),
+                "width": width,
+                "height": height,
+                "source_seq": int(source_seq),
+                "track_count": int(track_count),
+            }
+
+    def get(self, camera_id: str) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            item = self._frames.get(camera_id)
+            return dict(item) if item else None
+
+    def age_s(self, camera_id: str) -> Optional[float]:
+        with self._lock:
+            item = self._frames.get(camera_id)
+            if not item:
+                return None
+            return time.monotonic() - item["at"]
+
+
+ANNOTATED_STORE = AnnotatedFrameStore()

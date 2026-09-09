@@ -173,6 +173,8 @@ class TrackerHub:
                 cy = ((y1 + y2) / 2 + oy) / fh * 100.0
                 label = names.get(int(c), str(int(c))) if isinstance(names, dict) else str(int(c))
                 cat = engine.category_of(int(c)) if hasattr(engine, "category_of") else "vehicle"
+                # bbox ternormalisasi 0..1 thd frame penuh (upscale seragam -> konsisten
+                # dengan frame asli pemanggil). Clamp agar selalu valid untuk renderer.
                 tracks.append({
                     "track_id": int(tid),
                     "class_id": int(c),
@@ -181,6 +183,12 @@ class TrackerHub:
                     "confidence": round(float(cf), 3),
                     "cx": round(cx, 1),
                     "cy": round(cy, 1),
+                    "bbox": {
+                        "x1": round(min(1.0, max(0.0, (x1 + ox) / fw)), 4),
+                        "y1": round(min(1.0, max(0.0, (y1 + oy) / fh)), 4),
+                        "x2": round(min(1.0, max(0.0, (x2 + ox) / fw)), 4),
+                        "y2": round(min(1.0, max(0.0, (y2 + oy) / fh)), 4),
+                    },
                 })
         summary = self.for_camera(camera_id).update(tracks, time.monotonic())
         summary["latency_s"] = round(time.monotonic() - t0, 3)
